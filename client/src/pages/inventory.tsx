@@ -48,17 +48,90 @@ export function InventoryPage() {
     </div>
 
     <Card>
-      <div className="border-b border-border p-4"><div className="relative max-w-md"><Search className="absolute right-3 top-3 size-4 text-muted-foreground" /><Input className="pr-9" placeholder={tab === 'summary' ? 'البحث باسم المنتج أو الباركود أو SKU' : 'البحث بالمنتج أو رقم الدفعة'} value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setSummaryPage(1); setBatchPage(1); }} /></div></div>
+      <div className="border-b border-border p-4">
+        <div className="relative max-w-md">
+          <Search className="absolute right-3 top-3 size-4 text-muted-foreground" />
+          <Input className="pr-9" placeholder={tab === 'summary' ? 'البحث باسم المنتج أو الباركود أو SKU' : 'البحث بالمنتج أو رقم الدفعة'} value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setSummaryPage(1); setBatchPage(1); }} />
+        </div>
+      </div>
       <StateView loading={tab === 'summary' ? summary.loading : batches.loading} error={tab === 'summary' ? summary.error : batches.error} empty={tab === 'summary' ? !summary.data?.items.length : !batches.data?.items.length} onRetry={tab === 'summary' ? summary.run : batches.run}>
         <>{tab === 'summary' ? <Table>
-          <thead><tr><Th>المنتج</Th><Th>التصنيف</Th><Th>المتاح</Th>{user?.role !== 'CASHIER' && <Th>قيمة المخزون</Th>}<Th>الحالة</Th></tr></thead>
-          <tbody>{summary.data?.items.map((item) => <tr key={item.id}><Td><strong dir="ltr" className="block text-left text-foreground">{item.name}</strong><div dir="ltr" className="text-left font-mono text-xs text-muted-foreground">{item.sku}</div></Td><Td dir="ltr" className="text-left">{item.category.name}</Td><Td className="font-bold text-foreground"><bdi>{item.availableQuantity}</bdi></Td>{user?.role !== 'CASHIER' && <Td className="ltr-data">{money(item.stockValue)}</Td>}<Td><Badge tone={item.stockStatus === 'OUT_OF_STOCK' ? 'red' : item.stockStatus === 'LOW_STOCK' ? 'amber' : 'green'}>{arabicLabel(item.stockStatus)}</Badge></Td></tr>)}</tbody>
+          <thead>
+            <tr>
+              <Th>المنتج</Th>
+              <Th>التصنيف</Th>
+              <Th>المتاح</Th>
+              {user?.role !== 'CASHIER' && <Th>قيمة المخزون</Th>}
+              <Th>الحالة</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.data?.items.map((item) =>
+              <tr key={item.id}>
+                <Td>
+                  <strong className="block text-right text-foreground">{item.name}</strong>
+                  <div className="text-right font-mono text-xs text-muted-foreground">{item.sku}</div>
+                </Td>
+                <Td className="text-right">{item.category.name}</Td>
+                <Td className="font-bold text-foreground">
+                  <bdi>{item.availableQuantity}</bdi>
+                </Td>
+                {user?.role !== 'CASHIER' && <Td className="ltr-data">{money(item.stockValue)}</Td>}
+                <Td>
+                  <Badge tone={item.stockStatus === 'OUT_OF_STOCK' ? 'red' : item.stockStatus === 'LOW_STOCK' ? 'amber' : 'green'}>{arabicLabel(item.stockStatus)}</Badge>
+                </Td>
+              </tr>)}
+          </tbody>
         </Table> : <Table>
-          <thead><tr><Th>المنتج</Th><Th>الدفعة</Th><Th>المتاح</Th><Th>الصلاحية</Th><Th>الحالة</Th><Th></Th></tr></thead>
-          <tbody>{batches.data?.items.map((batch) => <tr key={batch.id}><Td><strong dir="ltr" className="block text-left text-foreground">{batch.product.name}</strong><div dir="ltr" className="text-left font-mono text-xs text-muted-foreground">{batch.product.sku}</div></Td><Td><span className="font-mono text-xs">{batch.batchNumber}</span></Td><Td className="font-bold text-foreground"><bdi>{batch.availableQuantity}</bdi></Td><Td>{shortDate(batch.expiryDate)}</Td><Td><Badge tone={batch.status === 'ACTIVE' ? 'green' : batch.status === 'DEPLETED' ? 'slate' : 'red'}>{arabicLabel(batch.status)}</Badge></Td><Td>{can('inventory:adjust') && <Button size="sm" variant="outline" onClick={() => setAdjust(batch)}><SlidersHorizontal className="size-3.5" /> تعديل</Button>}</Td></tr>)}</tbody>
+          <thead>
+            <tr>
+              <Th>المنتج</Th>
+              <Th>الدفعة</Th>
+              <Th>المتاح</Th>
+              <Th>الصلاحية</Th>
+              <Th>الحالة</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {batches.data?.items.map((batch) =>
+              <tr key={batch.id}>
+                <Td>
+                  <strong className="block text-right text-foreground">{batch.product.name}</strong>
+                  <div className="text-right font-mono text-xs text-muted-foreground">{batch.product.sku}</div>
+                </Td>
+                <Td>
+                  <span className="font-mono text-xs">{batch.batchNumber}</span>
+                </Td>
+                <Td className="font-bold text-foreground">
+                  <bdi>{batch.availableQuantity}</bdi>
+                </Td>
+                <Td>{shortDate(batch.expiryDate)}</Td>
+                <Td>
+                  <Badge tone={batch.status === 'ACTIVE' ? 'green' : batch.status === 'DEPLETED' ? 'slate' : 'red'}>{arabicLabel(batch.status)}</Badge>
+                </Td>
+                <Td>
+                  {can('inventory:adjust') && <Button size="sm" variant="outline" onClick={() => setAdjust(batch)}><SlidersHorizontal className="size-3.5" /> تعديل</Button>}
+                </Td>
+              </tr>)}
+          </tbody>
         </Table>}
-        {tab === 'summary' && summary.data && <Pagination pagination={summary.data.pagination} onPageChange={setSummaryPage} onLimitChange={(nextLimit) => { setLimit(nextLimit); setSummaryPage(1); setBatchPage(1); }} />}
-        {tab === 'batches' && batches.data && <Pagination pagination={batches.data.pagination} onPageChange={setBatchPage} onLimitChange={(nextLimit) => { setLimit(nextLimit); setSummaryPage(1); setBatchPage(1); }} />}</>
+          {tab === 'summary' && summary.data && <Pagination
+            pagination={summary.data.pagination}
+            onPageChange={setSummaryPage}
+            onLimitChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setSummaryPage(1);
+              setBatchPage(1);
+            }} />}
+
+          {tab === 'batches' && batches.data && <Pagination
+            pagination={batches.data.pagination}
+            onPageChange={setBatchPage}
+            onLimitChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setSummaryPage(1);
+              setBatchPage(1);
+            }} />}</>
       </StateView>
     </Card>
 

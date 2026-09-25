@@ -75,7 +75,35 @@ export function ProductsPage() {
       </div>
       <StateView loading={products.loading} error={products.error} empty={!products.data?.items.length} onRetry={products.run}>
         <>
-          <Table><thead><tr><Th>المنتج</Th><Th>التصنيف</Th><Th>السعر</Th><Th>المخزون</Th><Th>النوع</Th></tr></thead><tbody>{products.data?.items.map((product) => <tr key={product.id}><Td><div dir="ltr" className="text-left font-semibold text-foreground">{product.name}</div><div dir="ltr" className="text-left text-xs text-muted-foreground">{product.genericName || product.sku}</div></Td><Td dir="ltr" className="text-left">{product.category.name}</Td><Td className="ltr-data font-semibold">{money(product.sellingPrice)}</Td><Td><Badge tone={product.availableQuantity === 0 ? 'red' : product.availableQuantity <= product.minimumStock ? 'amber' : 'green'}><bdi>{product.availableQuantity}</bdi> وحدة</Badge></Td><Td>{product.prescriptionRequired ? <Badge tone="purple">بوصفة</Badge> : <span className="text-muted-foreground">بدون وصفة</span>}</Td></tr>)}</tbody></Table>
+          <Table>
+            <thead>
+              <tr>
+                <Th>المنتج</Th>
+                <Th>التصنيف</Th>
+                <Th>السعر</Th>
+                <Th>المخزون</Th>
+                <Th>النوع</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.data?.items.map((product) => (
+                <tr key={product.id}>
+                  <Td>
+                    <div dir="rtl" className="text-right font-semibold text-foreground">{product.name}</div>
+                    <div dir="rtl" className="text-right text-xs text-muted-foreground">{product.genericName || product.sku}</div>
+                  </Td>
+                  <Td dir="rtl" className="text-right">{product.category.name}</Td>
+                  <Td className="ltr-data font-semibold">{money(product.sellingPrice)}</Td>
+                  <Td>
+                    <Badge tone={product.availableQuantity === 0 ? 'red' : product.availableQuantity <= product.minimumStock ? 'amber' : 'green'}>
+                      <bdi className="ltr-data">{product.availableQuantity}</bdi> قطعة
+                    </Badge>
+                  </Td>
+                  <Td>{product.prescriptionRequired ? <Badge tone="purple">بروشتة</Badge> : <span className="text-muted-foreground">بدون روشتة</span>}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
           {products.data && <Pagination pagination={products.data.pagination} onPageChange={setPage} onLimitChange={(nextLimit) => { setLimit(nextLimit); setPage(1); }} />}
         </>
       </StateView>
