@@ -1,0 +1,348 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PHARMACIST
+  CASHIER
+}
+
+enum BatchStatus {
+  ACTIVE
+  EXPIRED
+  DEPLETED
+  DAMAGED
+}
+
+enum MovementType {
+  PURCHASE
+  SALE
+  SALE_RETURN
+  PURCHASE_RETURN
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  DAMAGED
+  EXPIRED
+  VOID
+}
+
+enum PurchaseStatus {
+  DRAFT
+  RECEIVED
+  CANCELLED
+}
+
+enum SaleStatus {
+  COMPLETED
+  PARTIALLY_RETURNED
+  RETURNED
+  VOIDED
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIALLY_PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE_WALLET
+}
+
+model User {
+  id                String              @id @default(uuid()) @db.Uuid
+  name              String
+  phone             String              @unique
+  passwordHash      String
+  role              Role
+  isActive          Boolean             @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  sessions          Session[]
+  sales             Sale[]              @relation("CashierSales")
+  purchases         Purchase[]          @relation("PurchaseCreator")
+  receivedPurchases Purchase[]          @relation("PurchaseReceiver")
+  movements         InventoryMovement[]
+  returns           SaleReturn[]
+  audits            AuditLog[]
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String
+  expiresAt  DateTime
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Category {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  products    Product[]
+}
+
+model Manufacturer {
+  id       String    @id @default(uuid()) @db.Uuid
+  name     String    @unique
+  phone    String?
+  country  String?
+  isActive Boolean   @default(true)
+  products Product[]
+}
+
+model Product {
+  id                   String              @id @default(uuid()) @db.Uuid
+  name                 String
+  genericName          String?
+  barcode              String              @unique
+  sku                  String              @unique
+  categoryId           String              @db.Uuid
+  manufacturerId       String?             @db.Uuid
+  strength             String?
+  dosageForm           String?
+  description          String?
+  sellingPrice         Decimal             @db.Decimal(12, 2)
+  defaultPurchasePrice Decimal             @db.Decimal(12, 2)
+  prescriptionRequired Boolean             @default(false)
+  minimumStock         Int                 @default(0)
+  isActive             Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  category             Category            @relation(fields: [categoryId], references: [id])
+  manufacturer         Manufacturer?       @relation(fields: [manufacturerId], references: [id])
+  batches              InventoryBatch[]
+  movements            InventoryMovement[]
+  purchaseItems        PurchaseItem[]
+  saleItems            SaleItem[]
+  returnItems          SaleReturnItem[]
+
+  @@index([name])
+  @@index([barcode])
+  @@index([sku])
+  @@index([isActive, name, id])
+}
+
+model InventoryBatch {
+  id                String              @id @default(uuid()) @db.Uuid
+  productId         String              @db.Uuid
+  batchNumber       String
+  purchaseItemId    String?             @unique @db.Uuid
+  purchasePrice     Decimal             @db.Decimal(12, 2)
+  sellingPrice      Decimal?            @db.Decimal(12, 2)
+  initialQuantity   Int
+  availableQuantity Int
+  manufacturingDate DateTime?
+  expiryDate        DateTime
+  receivedAt        DateTime            @default(now())
+  status            BatchStatus         @default(ACTIVE)
+  product           Product             @relation(fields: [productId], references: [id])
+  purchaseItem      PurchaseItem?       @relation(fields: [purchaseItemId], references: [id])
+  movements         InventoryMovement[]
+  allocations       SaleItemBatch[]
+
+  @@index([productId, batchNumber])
+  @@index([productId])
+  @@index([expiryDate])
+  @@index([status, expiryDate])
+}
+
+model InventoryMovement {
+  id             String         @id @default(uuid()) @db.Uuid
+  productId      String         @db.Uuid
+  batchId        String         @db.Uuid
+  type           MovementType
+  quantity       Int
+  quantityBefore Int
+  quantityAfter  Int
+  referenceType  String?
+  referenceId    String?
+  reason         String?
+  createdById    String         @db.Uuid
+  createdAt      DateTime       @default(now())
+  product        Product        @relation(fields: [productId], references: [id])
+  batch          InventoryBatch @relation(fields: [batchId], references: [id])
+  createdBy      User           @relation(fields: [createdById], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([batchId])
+}
+
+model Supplier {
+  id            String     @id @default(uuid()) @db.Uuid
+  name          String
+  phone         String
+  email         String?
+  address       String?
+  taxNumber     String?
+  contactPerson String?
+  notes         String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  purchases     Purchase[]
+}
+
+model Purchase {
+  id                    String         @id @default(uuid()) @db.Uuid
+  purchaseNumber        String         @unique
+  supplierId            String         @db.Uuid
+  supplierInvoiceNumber String?
+  status                PurchaseStatus @default(DRAFT)
+  subtotal              Decimal        @db.Decimal(12, 2)
+  discount              Decimal        @default(0) @db.Decimal(12, 2)
+  tax                   Decimal        @default(0) @db.Decimal(12, 2)
+  total                 Decimal        @db.Decimal(12, 2)
+  purchasedAt           DateTime       @default(now())
+  receivedAt            DateTime?
+  createdById           String         @db.Uuid
+  receivedById          String?        @db.Uuid
+  notes                 String?
+  supplier              Supplier       @relation(fields: [supplierId], references: [id])
+  createdBy             User           @relation("PurchaseCreator", fields: [createdById], references: [id])
+  receivedBy            User?          @relation("PurchaseReceiver", fields: [receivedById], references: [id])
+  items                 PurchaseItem[]
+
+  @@index([purchaseNumber])
+  @@index([supplierId, purchasedAt])
+}
+
+model PurchaseItem {
+  id            String          @id @default(uuid()) @db.Uuid
+  purchaseId    String          @db.Uuid
+  productId     String          @db.Uuid
+  batchNumber   String
+  quantity      Int
+  purchasePrice Decimal         @db.Decimal(12, 2)
+  sellingPrice  Decimal         @db.Decimal(12, 2)
+  expiryDate    DateTime
+  subtotal      Decimal         @db.Decimal(12, 2)
+  purchase      Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product       Product         @relation(fields: [productId], references: [id])
+  batch         InventoryBatch?
+}
+
+model Sale {
+  id            String        @id @default(uuid()) @db.Uuid
+  invoiceNumber String        @unique
+  cashierId     String        @db.Uuid
+  status        SaleStatus    @default(COMPLETED)
+  subtotal      Decimal       @db.Decimal(12, 2)
+  itemDiscount  Decimal       @default(0) @db.Decimal(12, 2)
+  orderDiscount Decimal       @default(0) @db.Decimal(12, 2)
+  tax           Decimal       @default(0) @db.Decimal(12, 2)
+  total         Decimal       @db.Decimal(12, 2)
+  paidAmount    Decimal       @db.Decimal(12, 2)
+  changeAmount  Decimal       @default(0) @db.Decimal(12, 2)
+  paymentStatus PaymentStatus @default(PAID)
+  createdAt     DateTime      @default(now())
+  cashier       User          @relation("CashierSales", fields: [cashierId], references: [id])
+  items         SaleItem[]
+  payments      Payment[]
+  returns       SaleReturn[]
+
+  @@index([invoiceNumber])
+  @@index([cashierId, createdAt])
+  @@index([createdAt])
+}
+
+model SaleItem {
+  id                  String           @id @default(uuid()) @db.Uuid
+  saleId              String           @db.Uuid
+  productId           String           @db.Uuid
+  productNameSnapshot String
+  quantity            Int
+  unitPrice           Decimal          @db.Decimal(12, 2)
+  discount            Decimal          @default(0) @db.Decimal(12, 2)
+  subtotal            Decimal          @db.Decimal(12, 2)
+  sale                Sale             @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product             Product          @relation(fields: [productId], references: [id])
+  batches             SaleItemBatch[]
+  returnItems         SaleReturnItem[]
+}
+
+model SaleItemBatch {
+  id         String         @id @default(uuid()) @db.Uuid
+  saleItemId String         @db.Uuid
+  batchId    String         @db.Uuid
+  quantity   Int
+  unitCost   Decimal        @db.Decimal(12, 2)
+  saleItem   SaleItem       @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
+  batch      InventoryBatch @relation(fields: [batchId], references: [id])
+}
+
+model Payment {
+  id        String        @id @default(uuid()) @db.Uuid
+  saleId    String        @db.Uuid
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(12, 2)
+  reference String?
+  createdAt DateTime      @default(now())
+  sale      Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model SaleReturn {
+  id           String           @id @default(uuid()) @db.Uuid
+  returnNumber String           @unique
+  saleId       String           @db.Uuid
+  createdById  String           @db.Uuid
+  reason       String
+  refundAmount Decimal          @db.Decimal(12, 2)
+  createdAt    DateTime         @default(now())
+  sale         Sale             @relation(fields: [saleId], references: [id])
+  createdBy    User             @relation(fields: [createdById], references: [id])
+  items        SaleReturnItem[]
+}
+
+model SaleReturnItem {
+  id           String     @id @default(uuid()) @db.Uuid
+  returnId     String     @db.Uuid
+  saleItemId   String     @db.Uuid
+  productId    String     @db.Uuid
+  quantity     Int
+  refundAmount Decimal    @db.Decimal(12, 2)
+  restocked    Boolean    @default(false)
+  return       SaleReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  saleItem     SaleItem   @relation(fields: [saleItemId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @db.Uuid
+  action       String
+  entityType   String
+  entityId     String?
+  previousData Json?
+  newData      Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model Setting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}

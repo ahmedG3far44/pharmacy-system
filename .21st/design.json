@@ -1,0 +1,14 @@
+{
+  "name": "Pharmacy operations console",
+  "decisions": [
+    "Use a dense, calm medical operations interface with a blue primary scale, light neutral sidebar, and white work surfaces.",
+    "Prioritize POS search and cart speed; keep operational tables compact and readable.",
+    "Use color only for inventory, expiry, payment and transaction status—not decoration.",
+    "Every data view includes loading, error and empty states and remains usable on narrow screens.",
+    "Open record edits in a full-height right workspace panel; its backdrop covers only the main workspace on desktop and the full viewport on mobile.",
+    "Use one shared period dropdown with an inline exact-date input across Sales and Reports, paired with summary metrics above transaction tables.",
+    "Use a focused payment confirmation dialog with a prominent amount due, explicit payment-method verification, cash tender shortcuts, and live due/change feedback.",
+    "Use flat, compact POS product cards with border and background state changes instead of shadows or lift animations; expose price, availability, SKU, prescription status, and in-sale quantity at a glance.",
+    "Arabic is the only interface language and the application shell is RTL; preserve English catalog names and render identifiers, codes, dates, currency values, and numbers with Latin digits and isolated LTR direction."
+  ]
+}

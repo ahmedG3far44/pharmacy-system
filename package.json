@@ -1,0 +1,18 @@
+{
+  "name": "pharmacy-inventory-system",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server",
+    "db:generate": "npm run db:generate -w server",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:seed": "npm run db:seed -w server",
+    "seed:medium": "npm run seed:medium -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
